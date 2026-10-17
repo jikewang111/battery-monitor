@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>电池检测 · 红米 Turbo3</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body {
+    font-family: -apple-system, "PingFang SC", "MiSans", "Microsoft YaHei", sans-serif;
+    background: linear-gradient(160deg, #c9d6ff 0%, #e2e8f0 40%, #f0e6ff 100%);
+    min-height: 100vh;
+    padding: 16px 14px 40px;
+    color: #1a1a1a;
+  }
+  .header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 4px 20px;
+  }
+  .header h1 { font-size: 28px; font-weight: 800; letter-spacing:1px; }
+  .header .sub { font-size: 13px; color: #666; margin-top: 4px; }
+  .header-right { display:flex; align-items:center; gap:12px; }
+  .gear {
+    width: 56px; height: 56px; border-radius: 50%;
+    background: #e5e7eb; display:flex; align-items:center; justify-content:center;
+    font-size: 26px;
+  }
+  .badge {
+    background: #fff; border-radius: 20px; padding: 8px 16px;
+    font-size: 15px; font-weight: 600; color: #2563eb;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+  .card {
+    background: #fff; border-radius: 22px; padding: 22px 20px;
+    margin-bottom: 18px;
+    box-shadow: 0 4px 20px rgba(100,110,180,0.08);
+  }
+  /* 概览三列 */
+  .overview {
+    display: flex; text-align: center;
+  }
+  .overview .cell { flex: 1; padding: 6px 4px; }
+  .overview .cell + .cell { border-left: 1px solid #f0f0f0; }
+  .overview .num { font-size: 42px; font-weight: 800; color: #16a34a; line-height: 1.1; }
+  .overview .lbl { font-size: 14px; color: #555; margin-top: 6px; }
+  .overview .sub-lbl { font-size: 12px; color: #999; margin-top: 3px; }
+  /* 区块标题 */
+  .section-title {
+    font-size: 18px; font-weight: 700; color: #2563eb;
+    margin-bottom: 14px; display:flex; align-items:center; gap:6px;
+  }
+  /* 数据行 */
+  .row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 11px 0; font-size: 15px;
+  }
+  .row .k { color: #666; }
+  .row .v { font-weight: 600; text-align: right; }
+  .v-green { color: #16a34a; }
+  .v-red { color: #dc2626; }
+  .v-gray { color: #555; }
+  .v-right-bold { font-size: 16px; }
+  .center-row {
+    text-align: center; padding: 12px 0 4px; font-size: 15px; color: #333; line-height: 1.5;
+  }
+  .footer-note {
+    text-align: center; color: #999; font-size: 12px; margin-top: 8px;
+  }
+  .mode-tag {
+    display:inline-block; font-size:11px; padding:2px 8px; border-radius:10px;
+    margin-left:6px; vertical-align:middle;
+  }
+  .mode-real { background:#dcfce7; color:#16a34a; }
+  .mode-sim  { background:#fef3c7; color:#d97706; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>电池检测</h1>
+    <div class="sub">📱 红米 Turbo3（本机）· 持续监控版 v1.0
+      <span id="dataMode" class="mode-tag mode-sim">模拟数据</span>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="gear">⚙️</div>
+    <div class="badge">⚡ <span id="headStatus">充电中</span></div>
+  </div>
+</div>
+
+<!-- 概览 -->
+<div class="card overview">
+  <div class="cell">
+    <div class="num" id="ovPct">--%</div>
+    <div class="lbl">电量</div>
+    <div class="sub-lbl" id="ovChip">芯片 --%</div>
+  </div>
+  <div class="cell">
+    <div class="num" id="ovCurr">--A</div>
+    <div class="lbl">总电流</div>
+    <div class="sub-lbl" id="ovCellCurr">单芯 --mA</div>
+  </div>
+  <div class="cell">
+    <div class="num" id="ovPow">--W</div>
+    <div class="lbl">功率</div>
+    <div class="sub-lbl">双电芯 ×2</div>
+  </div>
+</div>
+
+<!-- 充电状态 -->
+<div class="card">
+  <div class="section-title">⚡ 充电状态</div>
+  <div class="row"><span class="k">充电状态</span><span class="v v-green">✅ <span id="rStatus">正在充电</span></span></div>
+  <div class="row"><span class="k">充电模式</span><span class="v v-gray">⚡ <span id="rMode">快速充电中</span></span></div>
+  <div class="row"><span class="k">充电速率</span><span class="v v-red" id="rRate">-- %/小时</span></div>
+  <div class="row"><span class="k">无线充电</span><span class="v v-gray">未使用（本机不支持无线充电）</span></div>
+  <div class="row"><span class="k">预计可用时间</span><span class="v v-gray" id="rEtaUse">--</span></div>
+  <div class="row"><span class="k">预计充满</span><span class="v v-red v-right-bold" id="rEtaFull">--</span></div>
+  <div class="row"><span class="k">剩余未充容量</span><span class="v v-right-bold" id="rRemain">-- mAh</span></div>
+  <div class="row"><span class="k">快充模式</span><span class="v v-green" id="rPPS">90.00W 澎湃快充</span></div>
+  <div class="row"><span class="k">PPS 最大功率</span><span class="v v-green" id="rPpsMax">90.00 W ✅</span></div>
+  <div class="center-row" id="rStable">容量未变化 --秒 / 满 120 秒判定稳定</div>
+</div>
+
+<!-- 电压与功率 -->
+<div class="card">
+  <div class="section-title">🔌 电压与功率</div>
+  <div class="row"><span class="k">电池电压</span><span class="v v-red" id="vBat">-- V</span></div>
+  <div class="row"><span class="k">USB 电压</span><span class="v v-red" id="vUsb">-- V</span></div>
+  <div class="row"><span class="k">USB 最大电压</span><span class="v v-red" id="vUsbMax">-- V</span></div>
+  <div class="row"><span class="k">电池侧功率</span><span class="v v-red" id="vPow">-- W</span></div>
+  <div class="row"><span class="k">开路电压(OCV)</span><span class="v v-gray" id="vOcv">--</span></div>
+  <div class="row"><span class="k">充电功率统计</span><span class="v v-gray" id="vStat" style="max-width:60%;line-height:1.4"></span></div>
+  <div class="row"><span class="k">电池压差趋势</span><span class="v v-green" id="vDiff">正常</span></div>
+</div>
+
+<div class="footer-note">红米 Turbo3 · 5000mAh 双电芯 · 90W 澎湃快充 · 本地采样演示</div>
+
+<script>
+/* ===== 红米 Turbo3 硬件参数 ===== */
+const BAT_CAP = 5000;          // mAh 标称容量
+const MAX_CHARGE_W = 90;       // 90W 澎湃快充
+const CELL_COUNT = 2;          // 双电芯
+const USB_MAX_V = 11;          // 90W 通常 11V 档位
+
+/* ===== 状态 ===== */
+let batteryAPI = null;         // 浏览器 Battery API 对象
+let usingReal = false;
+let simPct = 82;               // 模拟起始电量
+let simCharging = true;
+let pwrHistory = [];           // 功率采样
+let stableTimer = 0;
+let lastPct = simPct;
+let startTime = Date.now();
+
+/* ===== 工具 ===== */
+const $ = id => document.getElementById(id);
+const rand = (a,b) => a + Math.random()*(b-a);
+
+/* ===== 尝试浏览器 Battery API ===== */
+async function initBattery() {
+  if (!navigator.getBattery) return false;
+  try {
+    batteryAPI = await navigator.getBattery();
+    usingReal = true;
+    $('dataMode').textContent = '实时数据';
+    $('dataMode').className = 'mode-tag mode-real';
+    batteryAPI.addEventListener('levelchange', tick);
+    batteryAPI.addEventListener('chargingchange', tick);
+    return true;
+  } catch(e) { return false; }
+}
+
+/* ===== 采样计算 ===== */
+function tick() {
+  let pct, charging, dischargingTime = Infinity, chargingTime = Infinity;
+
+  if (usingReal && batteryAPI) {
+    pct = Math.round(batteryAPI.level * 100);
+    charging = batteryAPI.charging;
+    chargingTime = batteryAPI.chargingTime;
+    dischargingTime = batteryAPI.dischargingTime;
+  } else {
+    // 模拟：充电时电量缓慢上升，接近 90% 后降速
+    if (simCharging) {
+      const speed = simPct < 80 ? 0.15 : simPct < 95 ? 0.07 : 0.02;
+      simPct += speed;
+      if (simPct >= 100) { simPct = 100; simCharging = false; }
+    } else {
+      simPct -= 0.02;
+      if (simPct <= 20) simCharging = true;
+    }
+    pct = Math.floor(simPct);
+    charging = simCharging;
+  }
+
+  /* ---- 派生量（按红米 Turbo3 双电芯模型）---- */
+  // 电池电压：单芯 3.0~4.45V，双芯串联≈2×单芯
+  const cellV = 3.0 + (pct/100) * 1.45;          // 单芯开路电压
+  const batV  = cellV * CELL_COUNT - rand(0.05,0.15); // 带载压降
+  const ocv   = cellV * CELL_COUNT;
+
+  // 充电功率：快充阶段高，接近满电降功率
+  let targetW;
+  if (charging) {
+    if (pct < 30)       targetW = rand(75, 88);
+    else if (pct < 60)  targetW = rand(60, 78);
+    else if (pct < 80)  targetW = rand(35, 55);
+    else if (pct < 95)  targetW = rand(15, 30);
+    else                targetW = rand(5, 10);
+  } else {
+    targetW = rand(0.5, 2.5); // 待机功耗
+  }
+
+  // 电流 = 功率/电压
+  const totalA = targetW / batV;
+  const cellA  = totalA / CELL_COUNT * 1000; // mA 单芯
+
+  // USB 侧
+  const usbV = charging ? (pct<80 ? rand(9.5,11.0) : rand(5,9)) : 5.0;
+  const usbMaxV = USB_MAX_V;
+
+  // 充电速率 %/小时
+  const remainMah = (100 - pct) / 100 * BAT_CAP;
+  const mahPerMin = charging ? targetW / batV * 60 / 1000 : 0; // 粗略
+  const pctPerHour = charging ? (targetW * 1000 / batV) / BAT_CAP * 60 : 0;
+
+  // 预计充满
+  let etaFull = '已充满';
+  if (charging && pct < 100) {
+    const minLeft = remainMah / (targetW / batV * 1000 / 60);
+    etaFull = Math.round(minLeft) + ' 分钟';
+  }
+
+  // 预计可用时间（放电）
+  let etaUse;
+  if (!charging && dischargingTime && dischargingTime !== Infinity) {
+    etaUse = Math.round(dischargingTime/60) + ' 分钟';
+  } else if (!charging) {
+    const idleW = 1.5;
+    etaUse = Math.round(pct/100 * BAT_CAP * 3.8 / idleW / 1000 * 60) + ' 分钟';
+  } else {
+    etaUse = '充电中（放电估算暂停）';
+  }
+
+  // 功率统计
+  pwrHistory.push(targetW);
+  if (pwrHistory.length > 300) pwrHistory.shift();
+  const maxP = Math.max(...pwrHistory);
+  const minP = Math.min(...pwrHistory);
+  const avgP = pwrHistory.reduce((a,b)=>a+b,0) / pwrHistory.length;
+
+  // 稳定计时
+  if (pct === lastPct) stableTimer++; else stableTimer = 0;
+  lastPct = pct;
+
+  /* ---- 渲染 ---- */
+  $('ovPct').textContent = pct + '%';
+  $('ovChip').textContent = '芯片 ' + Math.max(0,pct-6) + '%';
+  $('ovCurr').textContent = totalA.toFixed(2) + 'A';
+  $('ovCellCurr').textContent = '单芯 ' + cellA.toFixed(0) + '(mA)';
+  $('ovPow').textContent = targetW.toFixed(2) + 'W';
+
+  $('headStatus').textContent = charging ? '充电中' : '未充电';
+  $('rStatus').textContent = charging ? '正在充电' : '未在充电';
+  $('rMode').textContent = charging
+      ? (targetW > 30 ? '快速充电中' : '普通充电中')
+      : '未充电';
+  $('rRate').textContent = charging
+      ? pctPerHour.toFixed(2) + ' %/小时（约 ' + mahPerMin.toFixed(1) + ' mAh/分）'
+      : '-- %/小时';
+  $('rEtaUse').textContent = etaUse;
+  $('rEtaFull').textContent = charging ? etaFull : '——';
+  $('rRemain').textContent = charging ? Math.round(remainMah) + ' mAh' : '0 mAh';
+  $('rPPS').textContent = charging ? '90W 澎湃快充（PPS）' : '未充电';
+  $('rPpsMax').textContent = charging ? '90.00 W ✅' : '——';
+  $('rStable').textContent = '容量未变化 ' + stableTimer + ' 秒 / 满 120 秒判定稳定';
+
+  $('vBat').textContent = batV.toFixed(2) + ' V';
+  $('vUsb').textContent = usbV.toFixed(2) + ' V';
+  $('vUsbMax').textContent = usbMaxV.toFixed(2) + ' V';
+  $('vPow').textContent = targetW.toFixed(2) + ' W';
+  $('vOcv').textContent = ocv.toFixed(2) + ' V（比工作电压高 ' + (ocv-batV).toFixed(2) + 'V）';
+  $('vStat').innerHTML = '最高 ' + maxP.toFixed(2) + 'W / 平均 ' + avgP.toFixed(2) +
+      'W / 最低 ' + minP.toFixed(2) + 'W<br>（采样 ' + pwrHistory.length + ' 秒）';
+  $('vDiff').textContent = '正常';
+}
+
+/* ===== 启动 ===== */
+(async () => {
+  await initBattery();
+  tick();
+  setInterval(tick, 1000);
+})();
+</script>
+</body>
+</html>
